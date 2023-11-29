@@ -1,5 +1,5 @@
 # Byttnerioideae Systematic Literature Review
-Accompanying code for a systematic literature review of morphology and evolution in the Byttnerioideae (cacao and its relatives).   
+Accompanying code for a systematic literature review of morphology and evolution in the Byttnerioideae (cacao and its relatives) using R Markdown.   
 *Last edited on 29 November 2023*   
 
 <p align="center">
