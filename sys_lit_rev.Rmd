@@ -1,0 +1,312 @@
+---
+title: "Systematic Literature Review using litsearchr"
+author: "K Wolcott"
+date: "16 Nov 2023"
+output: rmarkdown::github_document
+always_allow_html: TRUE
+---
+<style>
+table {
+  background-color: white !important;
+  color: black !important;
+}
+</style>
+
+## Introduction
+Use this notebook to carry out a systematic literature search using litsearchr on a Mac OS. We are investigating the morphology and evolution of the Byttnerioideae, a taxonomically challenging clade within the Malvaceae. First, you will use some manually selected keywords for preliminary searches. Then, keywords will be automatically extracted from the abstracts found during the preliminary passes. Finally, carry out a systematic literature search using the complete list of keywords and analyze patterns in found articles.
+
+These steps were made following a tutorial from https://www.r-bloggers.com/2023/03/automated-systematic-literature-search-using-r-litsearchr-and-google-scholar-web-scraping/
+
+## This is an R Markdown Document
+Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Install and load packages and functions
+```{r}
+# Install litsearchr using R devtools
+cat("\nInstalling litsearchr package from GitHub ")
+if(require(litsearchr)) remotes::install_github("elizagrames/litsearchr", ref = "main")
+
+# Dependency packages to load/install
+packages = c(
+  "litsearchr", "dplyr", "stopwords","readr", "devtools", "kableExtra",
+  "ggplot2", "ggraph", "ggrepel", "igraph", "rvest", "httr", "knitr"
+)
+
+# Install packages not yet installed
+installed_packages = packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+  install.packages("igraph", type="binary")
+}
+
+# Load packages
+invisible(lapply(packages, library, character.only = TRUE))
+cat("\nLoaded packages:\n", packages)
+
+# List listsearchr version (will help with troubleshooting)
+cat("\n\nlitsearchr version:")
+packageVersion("litsearchr")
+
+# Load in scrape_gs() function from GitHub to scrape Google Scholar for articles
+devtools::source_url("https://gist.githubusercontent.com/ClaudiuPapasteri/7bef34394c395e03ee074f884ddbf4d4/raw/35c20268c3e3516d267ff2e8b96a4648195ed5ce/scrape_scholargooglesearch.R")
+cat("\n\nLoading scrape_gs function from GitHub")
+#View(scrape_gs) # Un-comment this line to inspect function in new tab
+```
+
+## Setup Markdown notebook parameters 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE) # Include all code blocks in knitted PDF output
+```
+
+## Set working directory
+TO DO: Define your wd variable below
+```{r}
+wd = "/Users/katherinewolcott/Documents/r/jill" # TO DO: define your wd
+cwd = paste(wd, "/litrev", sep="")
+ifelse(!dir.exists(wd), c(cat("Creating directory", cwd), dir.create(cwd, recursive=TRUE)), c(cat("Directory already created", cwd, " "), FALSE))
+knitr::opts_knit$set(root.dir = cwd)
+cat("Working directory set to: ", cwd)
+```
+
+## TEST 1: Try out code to search Google Scholar and automatically extract new search terms
+```{r, cache = TRUE}
+# Run test query for 1 search phrase and the first 5 pages of Google Scholar results
+## intext searches abstract instead of title
+phrase1 = 'intext:"Byttnerioideae" AND "morphology"'  # Use Boolean operators
+test1 = scrape_gs(term = phrase1, crawl_delay = 1.2, pages = 1:5) 
+cat("Test 1: Query results from Google Scholar\n")
+# Display the table as a scrollable object using kableExtra package
+kbl(test1, table.attr = "style = \"color: black;\"") %>%
+  kable_styling("striped", full_width = F) %>%
+  scroll_box(width = "100%")
+
+# Test automatic term extraction from abstracts for the first 5 pages of results
+gs_df = test1
+test1_gs_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
+                                      method = "fakerake", min_freq = 3, min_n = 2,
+                                      stopwords = stopwords::data_stopwords_stopwordsiso$en
+                                      )
+cat("Test 1: Automatically extracted terms: \n")
+print(test1_gs_terms)
+```
+
+## TEST 2: Try running multiple queries at the same time for different search term combinations
+```{r, cache = TRUE}
+# Run multiple queries using lists of higher taxa and key terms for the first 5 pages of Google Scholar search results
+first  = list(term = 'intext:"Byttnerioideae" OR "Sterculiaceae" AND "morphology"', pages = 1:5)
+second = list(term = 'intext:"Byttnerioideae" OR "Sterculiaceae" AND "evolution"', pages = 1:5)
+third = list(term = 'intext:"Byttnerioideae" OR "Sterculiaceae" AND "ecology"', pages = 1:5)
+test_list = list(first, second, third) 
+test2 = do.call(rbind, lapply(test_list, function(x) do.call(scrape_gs, c(crawl_delay = 1.2, x))))
+cat("Test 2: Query results from Google Scholar\n")
+# Display the table as a scrollable object using kableExtra package
+kbl(test2, table.attr = "style = \"color: black;\"") %>%
+  kable_styling("striped", full_width = F) %>%
+  scroll_box(width = "100%")
+
+# Test automatic term extraction from abstracts for the first 5 pages of results
+gs_df = test2
+test2_gs_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
+                                           method = "fakerake", min_freq = 3, min_n = 2,
+                                           stopwords = stopwords::data_stopwords_stopwordsiso$en)
+cat("Test 2: Automatically extracted terms: \n")
+print(test2_gs_terms)
+```
+
+# TEST 3: Try many different search term combinations for all genera within the Byttnerioideae
+```{r, cache = TRUE}
+# Run multiple queries using lists of specific genera in the Byttnerioideae
+first  = list(term = 'intext:"Hermannieae" OR "Lasiopetaleae" OR "Bytttnerieae" OR "Theobromeae"', pages = 1:5)
+second = list(term = 'intext:"Waltheria" OR "Hermannia" OR "Melochia" OR "Hannafordia" OR "Maxwellia"', pages = 1:5)
+third = list(term = 'intext:"Lasiopetalum" OR "Thomasia" OR "Guichenotia" OR "Commersonia" OR "Rulingia"', pages = 1:5)
+fourth = list(term = 'intext:"Keraudrenia" OR "Seringia" OR "Abroma" OR "Byttneria" OR "Ayenia" OR "Rayleya"', pages = 1:5)
+fifth = list(term = 'intext:"Kleinhovia" OR "Leptonychia" OR "Scaphopetalum" OR "Theobroma" OR "Herrania" OR "Glossostemon" OR "Guazuma"', pages = 1:5)
+test_list = list(first, second, third, fourth, fifth) 
+
+test3 = do.call(rbind, lapply(test_list, function(x) do.call(scrape_gs, c(crawl_delay = 1.2, x))))
+cat("Test 3: Query results from Google Scholar\n")
+# Display the table as a scrollable object using kableExtra package
+kbl(test3, table.attr = "style = \"color: black;\"") %>%
+  kable_styling("striped", full_width = F) %>%
+  scroll_box(width = "100%")
+
+# Test automatic term extraction from abstracts for the first 5 pages of results
+gs_df = test3
+test3_gs_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
+                                           method = "fakerake", min_freq = 3, min_n = 2,
+                                           stopwords = stopwords::data_stopwords_stopwordsiso$en)
+cat("Test 3: Automatically extracted terms: \n")
+print(test3_gs_terms)
+```
+
+# First pass: Define preliminary terms list for first full pass of Google Scholar scraping
+```{r}
+# Combine Byttnerioideae genera, families, and topics of interest
+genera = c("Hermannieae", "Lasiopetaleae", "Bytttnerieae", "Theobromeae", "Waltheria", "Hermannia", "Melochia", "Hannafordia", "Maxwellia", "Lasiopetalum", "Thomasia", "Guichenotia", "Commersonia",  "Rulingia", "Keraudrenia", "Seringia", "Abroma", "Byttneria", "Ayenia", "Rayleya", "Kleinhovia",  "Leptonychia", "Scaphopetalum", "Theobroma", "Herrania", "Glossostemon", "Guazuma") # TO DO: Add any missing genera, if any
+families = c("Byttnerioideae", "Sterculiaceae") # Including old nomenclature
+topics = c("morphology", "evolution", "ecology", "phylogenetics") # TO DO: Add any relevant topics
+taxa = c(genera, families)
+
+# Make an ordered list by family, genus, and topic
+gs_grouped_selected_terms <- list(
+taxa = taxa,
+topics = topics
+)
+
+# Write the search
+search_string = litsearchr::write_search(
+gs_grouped_selected_terms,
+languages = "English",
+exactphrase = TRUE,
+stemming = FALSE,
+closure = "left",
+writesearch = FALSE
+)
+
+cat("\nSearch string: \n")
+print(search_string)
+```
+
+# First pass: Scrape Google Scholar
+## Run 1-2 scraping blocks per day to avoid Google Scholar kicking you out
+```{r, cache = TRUE}
+# Define useragent
+useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+# proxy1 = httr::use_proxy("5.78.83.190", port = 8080) # can pass proxy to function; here we just scrape patiently and don't use proxy
+# TO DO: Uncomment out one of the gs_df variables (1-5) at a time and run 1x-2x per day
+# Scrape pages 1:20
+#gs_df1 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 1:20, crawl_delay = 1.2, useragent) # scrape first 20 pages (200 published works)
+# Scrape pages 21:40
+#gs_df2 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 21:40, crawl_delay = 1.2, useragent) 
+# Scrape pages 41:60
+#gs_df3 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 41:60, crawl_delay = 1.2, useragent) 
+# Scrape pages 61:80
+#gs_df4 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 61:80, crawl_delay = 1.2, useragent)
+# Scrape last 19 pages provided by Google Scholar
+#gs_df5 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 81:99, crawl_delay = 1.2, useragent) 
+```
+
+# Create Co-Occurrence Network
+```{r}
+# Combine search results
+combined = rbind(test1, test2)
+combined = rbind(combined, test3)
+# Remove duplicates
+gs_df = combined %>% distinct(title, .keep_all = TRUE)
+cat("\nRows in original df: ", nrow(combined))
+cat("\nRows in df with duplicates removed: ", nrow(gs_df))
+
+# Combine key term results
+combined_terms = c(test1_gs_terms, test2_gs_terms, test3_gs_terms)
+# Remove duplicates
+gs_terms = unique(combined_terms)
+cat("\nTerms in original list: ", length(combined_terms))
+cat("\nTerms in list with duplicates removed: ", length(gs_terms))
+
+# Use the title and abstract of each article
+gs_docs = paste(gs_df[, "title"], gs_df[, "abstract"]) 
+gs_dfm = litsearchr::create_dfm(elements = gs_docs, features = gs_terms) # document-feature matrix
+gs_coocnet = litsearchr::create_network(gs_dfm, min_studies = 3)
+ggraph(gs_coocnet, layout = "stress") +
+coord_fixed() +
+expand_limits(x = c(-3, 3)) +
+geom_edge_link(aes(alpha = weight)) +
+geom_node_point(shape = "circle filled", fill = "white") +
+geom_node_text(aes(label = name), hjust = "outward", check_overlap = TRUE) +
+guides(edge_alpha = "none") +
+theme_void()
+```
+
+# Prune the Network based on node strength
+```{r}
+gs_node_strength = igraph::strength(gs_coocnet)
+gs_node_rankstrength = data.frame(term = names(gs_node_strength), strength = gs_node_strength, row.names = NULL)
+gs_node_rankstrength$rank = rank(gs_node_rankstrength$strength, ties.method = "min")
+gs_node_rankstrength = gs_node_rankstrength[order(gs_node_rankstrength$rank),]
+gs_plot_strength =
+ggplot(gs_node_rankstrength, aes(x = rank, y = strength, label = term)) +
+geom_line(lwd = 0.8) +
+geom_point() +
+ggrepel::geom_text_repel(size = 3, hjust = "right", nudge_y = 3, max.overlaps = 30) +
+theme_bw()
+gs_plot_strength
+```
+
+# Determine which terms to prune for a more manageable list
+```{r}
+# Cumulatively - retain 80% of the total strength of the network of search terms
+gs_cutoff_cum = litsearchr::find_cutoff(gs_coocnet, method = "cumulative", percent = 0.8)
+# Changepoints - points along the term rankings where the strength of the next strongest term is much greater than that of the previous one
+gs_cutoff_change = litsearchr::find_cutoff(gs_coocnet, method = "changepoint", knot_num = 3)
+gs_plot_strength +
+geom_hline(yintercept = gs_cutoff_cum, color = "red", lwd = 0.7, linetype = "longdash", alpha = 0.6) +
+geom_hline(yintercept = gs_cutoff_change, color = "orange", lwd = 0.7, linetype = "dashed", alpha = 0.6)
+```
+
+# Prune the terms
+```{r}
+# Determine cutoff criteria
+gs_cutoff_crit = gs_cutoff_change[which.min(abs(gs_cutoff_change - gs_cutoff_cum))] # e.g. nearest cutpoint to cumulative criterion (cumulative produces one value, changepoints may be many)
+gs_maxselected_terms = litsearchr::get_keywords(litsearchr::reduce_graph(gs_coocnet, gs_cutoff_crit))
+
+# Inspect selected terms
+cat("Selected terms: \n")
+print(gs_maxselected_terms)
+
+# Keep only shortest unique substrings
+superstring = rep(FALSE, length(gs_maxselected_terms))
+for(i in seq_len(length(gs_maxselected_terms))) {
+superstring[i] = any(stringr::str_detect(gs_maxselected_terms[i], gs_maxselected_terms[-which(gs_maxselected_terms == gs_maxselected_terms[i])]))
+}
+gs_selected_terms = gs_maxselected_terms[!superstring]
+cat("\nSelected terms as short substrings: \n")
+print(gs_selected_terms)
+```
+
+# Manually add and remove substrings
+# TO DO
+```{r}
+# Manually remove all unwanted substrings 
+to_remove = c("genus waltheria", "study aimed", "abroma augusta", "family sterculiaceae", "waltheria indica", "waltheria douradinha", "theobroma cacao") # TO DO: Modify this list based on terms displayed above that you do not want to search using
+gs_selected_terms = gs_selected_terms[!gs_selected_terms %in% to_remove] 
+genera = c("Hermannieae", "Lasiopetaleae", "Bytttnerieae", "Theobromeae", "Waltheria", "Hermannia", "Melochia", "Hannafordia", "Maxwellia", "Lasiopetalum", "Thomasia", "Guichenotia", "Commersonia",  "Rulingia", "Keraudrenia", "Seringia", "Abroma", "Byttneria", "Ayenia", "Rayleya", "Kleinhovia",  "Leptonychia", "Scaphopetalum", "Theobroma", "Herrania", "Glossostemon", "Guazuma") # TO DO: Add any missing genera, if any
+families = c("Byttnerioideae", "Sterculiaceae")
+topics = c("morphology", "evolution", "ecology", "phylogenetics") # TO DO: Add any relevant topics
+to_add = c(genera, families, topics)
+gs_selected_terms = c(gs_selected_terms, to_add)
+cat("\nFinal list of terms: \n")
+print(gs_selected_terms)
+```
+
+# Manual grouping into clusters - for more rigorous search we will need a combination of OR and AND operators
+```{r}
+topics = c(topics, gs_selected_terms[c(1:7)]) # TO DO: Make sure the indices for all returned topics are shown here
+taxa = c(families, genera)
+
+# Check that all terms were grouped
+all.equal(length(gs_selected_terms), sum(length(taxa), length(topics)))
+
+# Make an ordered list by family, genus, and topic
+gs_grouped_selected_terms <- list(
+taxa = taxa,
+topics = topics
+)
+```
+
+# Automatically write the search string
+```{r}
+# Write the search
+search_string = litsearchr::write_search(
+gs_grouped_selected_terms,
+languages = "English",
+exactphrase = TRUE,
+stemming = FALSE,
+closure = "left",
+writesearch = FALSE
+)
+
+cat("\nSearch string: \n")
+print(search_string)
+```
