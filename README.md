@@ -1,6 +1,6 @@
 # Byttnerioideae Systematic Literature Review
 Accompanying code for a systematic literature review of morphology and evolution in the Byttnerioideae (cacao and its relatives).   
-*Last edited on 19 November 2023*   
+*Last edited on 29 November 2023*   
 
 <p align="center">
 <a href="url"><img src="https://github.com/aubricot/bytt_syslitrev/blob/main/bytt_sysrev_banner.png" align="middle" width="900" ></a></p>   
@@ -13,7 +13,7 @@ Use [sys_lit_rev.Rmd](https://github.com/aubricot/bytt_syslitrev/blob/main/sys_l
 
 First, you will use some manually selected keywords for preliminary searches. Then, keywords will be automatically extracted from the abstracts found during the preliminary passes. Finally, carry out a systematic literature search using the complete list of keywords and analyze patterns in found articles.
 
-:point_right: :hibiscus: To see a rendered version (in progress) of the current R Markdown file with outputs on RPubs, [click here](https://rpubs.com/aubricot/1117098).
+:point_right: :hibiscus: To see a rendered version (in progress) of the current R Markdown file with outputs, [click here](https://github.com/aubricot/bytt_syslitrev/blob/main/sys_lit_rev.md).
 
 ## References 
 <ins>Botanical Literature</ins>
