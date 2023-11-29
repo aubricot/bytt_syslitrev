@@ -24,15 +24,15 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ## Install and load packages and functions
 ```{r}
-# Install litsearchr using R devtools
-cat("\nInstalling litsearchr package from GitHub ")
-if(require(litsearchr)) remotes::install_github("elizagrames/litsearchr", ref = "main")
-
 # Dependency packages to load/install
 packages = c(
   "litsearchr", "dplyr", "stopwords","readr", "devtools", "kableExtra",
   "ggplot2", "ggraph", "ggrepel", "igraph", "rvest", "httr", "knitr"
 )
+
+# Install litsearchr using R devtools
+cat("\nInstalling litsearchr package from GitHub ")
+if(require(litsearchr)) remotes::install_github("elizagrames/litsearchr", ref = "main")
 
 # Install packages not yet installed
 installed_packages = packages %in% rownames(installed.packages())
@@ -175,17 +175,29 @@ print(search_string)
 # Define useragent
 useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
 # proxy1 = httr::use_proxy("5.78.83.190", port = 8080) # can pass proxy to function; here we just scrape patiently and don't use proxy
+
 # TO DO: Uncomment out one of the gs_df variables (1-5) at a time and run 1x-2x per day
-# Scrape pages 1:20
+
+# Scrape pages 1:20 and save results as backup
 #gs_df1 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 1:20, crawl_delay = 1.2, useragent) # scrape first 20 pages (200 published works)
-# Scrape pages 21:40
-#gs_df2 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 21:40, crawl_delay = 1.2, useragent) 
-# Scrape pages 41:60
+#write.table(gs_df1, file='gs_df1.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+
+# Scrape pages 21:40 and save results as backup
+#gs_df2 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 21:40, crawl_delay = 1.2, useragent)
+#write.table(gs_df2, file='gs_df2.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+
+# Scrape pages 41:60 and save results as backup
 #gs_df3 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 41:60, crawl_delay = 1.2, useragent) 
-# Scrape pages 61:80
+#write.table(gs_df3, file='gs_df3.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+
+# Scrape pages 61:80 and save results as backup
 #gs_df4 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 61:80, crawl_delay = 1.2, useragent)
-# Scrape last 19 pages provided by Google Scholar
+#write.table(gs_df4, file='gs_df4.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+
+# Scrape last 19 pages provided by Google Scholar and save results as backup
 #gs_df5 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 81:99, crawl_delay = 1.2, useragent) 
+#write.table(gs_df5, file='gs_df5.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+
 ```
 
 # Create Co-Occurrence Network
