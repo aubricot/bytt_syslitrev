@@ -135,8 +135,11 @@ kbl(test3, table.attr = "style = \"color: black;\"") %>%
 # Test automatic term extraction from abstracts for the first 5 pages of results
 gs_df = test3
 test3_gs_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
-                                           method = "fakerake", min_freq = 3, min_n = 2,
-                                           stopwords = stopwords::data_stopwords_stopwordsiso$en)
+                                           method = "fakerake", min_freq = 3, 
+                                           min_n = 2,
+                                           stopwords = 
+                                        stopwords::data_stopwords_stopwordsiso$en
+                                      )
 cat("Test 3: Automatically extracted terms: \n")
 print(test3_gs_terms)
 ```
@@ -170,65 +173,75 @@ print(search_string)
 ```
 
 # First pass: Scrape Google Scholar
-## Run 1-2 scraping blocks per day to avoid Google Scholar kicking you out
 ```{r, cache = TRUE}
 # Define useragent
 useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
-# proxy1 = httr::use_proxy("5.78.83.190", port = 8080) # can pass proxy to function; here we just scrape patiently and don't use proxy
 
-# TO DO: Uncomment out one of the gs_df variables (1-5) at a time and run 1x-2x per day
-
-# Scrape pages 1:20 and save results as backup
-#gs_df1 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 1:20, crawl_delay = 1.2, useragent) # scrape first 20 pages (200 published works)
-#write.table(gs_df1, file='gs_df1.tsv', quote=TRUE, sep='\t', row.names = FALSE)
-
-# Scrape pages 21:40 and save results as backup
-#gs_df2 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 21:40, crawl_delay = 1.2, useragent)
-#write.table(gs_df2, file='gs_df2.tsv', quote=TRUE, sep='\t', row.names = FALSE)
-
-# Scrape pages 41:60 and save results as backup
-#gs_df3 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 41:60, crawl_delay = 1.2, useragent) 
-#write.table(gs_df3, file='gs_df3.tsv', quote=TRUE, sep='\t', row.names = FALSE)
-
-# Scrape pages 61:80 and save results as backup
-#gs_df4 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 61:80, crawl_delay = 1.2, useragent)
-#write.table(gs_df4, file='gs_df4.tsv', quote=TRUE, sep='\t', row.names = FALSE)
-
-# Scrape last 19 pages provided by Google Scholar and save results as backup
-#gs_df5 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 81:99, crawl_delay = 1.2, useragent) 
-#write.table(gs_df5, file='gs_df5.tsv', quote=TRUE, sep='\t', row.names = FALSE)
-
+# Scrape pages 1:25 and save results as a tsv file (gs_df1.tsv)
+gs_df1 = scrape_gs(term = 'intext:"Byttnerioideae" AND "morphology"', pages = 1:25, crawl_delay = 1.2, useragent) # scrape first 25 pages (250 published works)
+write.table(gs_df, file='gs_df1.tsv', quote=TRUE, sep='\t', row.names = FALSE)
 ```
 
 # Create Co-Occurrence Network
 ```{r}
-# Combine search results
-combined = rbind(test1, test2)
-combined = rbind(combined, test3)
+# Read in search results
+gs_df1 = read.table("gs_df1.tsv", sep='\t', header = TRUE)
+
+# Display results as a scrollable table using Kable
+cat("Search results: \n")
+kbl(gs_df1, table.attr = "style = \"color: black;\"") %>%
+  kable_styling("striped", full_width = F) %>%
+  scroll_box(width = "100%")
+
 # Remove duplicates
-gs_df = combined %>% distinct(title, .keep_all = TRUE)
-cat("\nRows in original df: ", nrow(combined))
+gs_df = gs_df1 %>% distinct(title, .keep_all = TRUE)
+cat("\nRows in original df: ", nrow(gs_df1))
 cat("\nRows in df with duplicates removed: ", nrow(gs_df))
 
 # Combine key term results
-combined_terms = c(test1_gs_terms, test2_gs_terms, test3_gs_terms)
+gs_df_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
+                                        method = "fakerake", 
+                                        min_freq = 3, 
+                                        min_n = 2,
+                                        stopwords = 
+                                        stopwords::data_stopwords_stopwordsiso$en
+                                      )
+cat("\nFirst pass: Automatically extracted terms: \n")
+print(gs_df_terms)
+
 # Remove duplicates
-gs_terms = unique(combined_terms)
-cat("\nTerms in original list: ", length(combined_terms))
-cat("\nTerms in list with duplicates removed: ", length(gs_terms))
+gs_df_terms_unq = unique(gs_df_terms)
+cat("\nTerms in original list: ", length(gs_df_terms))
+cat("\nTerms in list with duplicates removed: ", length(gs_df_terms_unq))
+cat("\n")
 
 # Use the title and abstract of each article
 gs_docs = paste(gs_df[, "title"], gs_df[, "abstract"]) 
-gs_dfm = litsearchr::create_dfm(elements = gs_docs, features = gs_terms) # document-feature matrix
+gs_dfm = litsearchr::create_dfm(elements = gs_docs, 
+                                features = gs_df_terms_unq
+                                ) # document-feature matrix
+
+# Create the coocurrence network
 gs_coocnet = litsearchr::create_network(gs_dfm, min_studies = 3)
-ggraph(gs_coocnet, layout = "stress") +
-coord_fixed() +
-expand_limits(x = c(-3, 3)) +
-geom_edge_link(aes(alpha = weight)) +
-geom_node_point(shape = "circle filled", fill = "white") +
-geom_node_text(aes(label = name), hjust = "outward", check_overlap = TRUE) +
-guides(edge_alpha = "none") +
-theme_void()
+
+# Plot the network
+coocnet_fig = ggraph(gs_coocnet, layout = "stress") +
+              coord_fixed() +
+              expand_limits(x = c(-1.5, 8)) +
+              geom_edge_link(aes(alpha = weight)) +
+              geom_node_point(shape = "circle filled", fill = "white") +
+              geom_node_text(aes(label = name), hjust = "outward", check_overlap 
+                             = TRUE) +
+              guides(edge_alpha = "none") +
+              theme_void()
+              coocnet_fig
+              dev.off()
+
+# Save plot to png
+cooc_fname = "cooc_net.png"
+ggsave(coocnet_fig, file = cooc_fname, width = 8.5, height = 3, bg = "white")
+cat("\nCo-ocurrence network plot saved to: ", cooc_fname)
+coocnet_fig
 ```
 
 # Prune the Network based on node strength
@@ -237,71 +250,70 @@ gs_node_strength = igraph::strength(gs_coocnet)
 gs_node_rankstrength = data.frame(term = names(gs_node_strength), strength = gs_node_strength, row.names = NULL)
 gs_node_rankstrength$rank = rank(gs_node_rankstrength$strength, ties.method = "min")
 gs_node_rankstrength = gs_node_rankstrength[order(gs_node_rankstrength$rank),]
-gs_plot_strength =
-ggplot(gs_node_rankstrength, aes(x = rank, y = strength, label = term)) +
-geom_line(lwd = 0.8) +
-geom_point() +
-ggrepel::geom_text_repel(size = 3, hjust = "right", nudge_y = 3, max.overlaps = 30) +
-theme_bw()
-gs_plot_strength
+cooc_rank_fig = ggplot(gs_node_rankstrength, 
+                          aes(x = rank, y = strength, label = term)) +
+                          geom_line(lwd = 0.8) +
+                          geom_point() +
+                          ggrepel::geom_text_repel(size = 3, hjust = "right", 
+                                                   nudge_y = 3, max.overlaps = 
+                                                   30) +
+                          theme_bw()
+                    cooc_rank_fig
+                    dev.off()
+
+# Save plot to png
+cooc_rank_fname = "cooc_ranked_strength.png"
+ggsave(cooc_rank_fig, file = cooc_rank_fname, width = 8.5, height = 3, bg = "white")
+cat("\nCo-ocurrence network plot saved to: ", cooc_rank_fname)
+cooc_rank_fig
 ```
 
-# Determine which terms to prune for a more manageable list
+
+# Inspect the terms
 ```{r}
-# Cumulatively - retain 80% of the total strength of the network of search terms
-gs_cutoff_cum = litsearchr::find_cutoff(gs_coocnet, method = "cumulative", percent = 0.8)
-# Changepoints - points along the term rankings where the strength of the next strongest term is much greater than that of the previous one
-gs_cutoff_change = litsearchr::find_cutoff(gs_coocnet, method = "changepoint", knot_num = 3)
-gs_plot_strength +
-geom_hline(yintercept = gs_cutoff_cum, color = "red", lwd = 0.7, linetype = "longdash", alpha = 0.6) +
-geom_hline(yintercept = gs_cutoff_change, color = "orange", lwd = 0.7, linetype = "dashed", alpha = 0.6)
-```
+# Inspect terms
+gs_terms = litsearchr::get_keywords(gs_coocnet)
+cat("Identified terms: \n")
+print(gs_terms)
 
-# Prune the terms
-```{r}
-# Determine cutoff criteria
-gs_cutoff_crit = gs_cutoff_change[which.min(abs(gs_cutoff_change - gs_cutoff_cum))] # e.g. nearest cutpoint to cumulative criterion (cumulative produces one value, changepoints may be many)
-gs_maxselected_terms = litsearchr::get_keywords(litsearchr::reduce_graph(gs_coocnet, gs_cutoff_crit))
-
-# Inspect selected terms
-cat("Selected terms: \n")
-print(gs_maxselected_terms)
-
-# Keep only shortest unique substrings
-superstring = rep(FALSE, length(gs_maxselected_terms))
-for(i in seq_len(length(gs_maxselected_terms))) {
-superstring[i] = any(stringr::str_detect(gs_maxselected_terms[i], gs_maxselected_terms[-which(gs_maxselected_terms == gs_maxselected_terms[i])]))
-}
-gs_selected_terms = gs_maxselected_terms[!superstring]
-cat("\nSelected terms as short substrings: \n")
-print(gs_selected_terms)
+# Save results to text file
+gs_terms_fname = "identified_search_terms.txt"
+write.table(gs_terms, file = gs_terms_fname, row.names = FALSE, 
+            col.names = FALSE, sep = "\n")
+cat("Identified search terms saved to: ", gs_terms_fname)
 ```
 
 # Manually add and remove substrings
 # TO DO
 ```{r}
 # Manually remove all unwanted substrings 
-to_remove = c("genus waltheria", "study aimed", "abroma augusta", "family sterculiaceae", "waltheria indica", "waltheria douradinha", "theobroma cacao") # TO DO: Modify this list based on terms displayed above that you do not want to search using
+to_remove = c("subfamilia byttnerioideae", "study aimed", "abroma augusta", "family sterculiaceae", "waltheria indica", "waltheria douradinha", "theobroma cacao") # TO DO: Modify this list based on terms displayed above that you do not want to search using
 gs_selected_terms = gs_selected_terms[!gs_selected_terms %in% to_remove] 
 genera = c("Hermannieae", "Lasiopetaleae", "Bytttnerieae", "Theobromeae", "Waltheria", "Hermannia", "Melochia", "Hannafordia", "Maxwellia", "Lasiopetalum", "Thomasia", "Guichenotia", "Commersonia",  "Rulingia", "Keraudrenia", "Seringia", "Abroma", "Byttneria", "Ayenia", "Rayleya", "Kleinhovia",  "Leptonychia", "Scaphopetalum", "Theobroma", "Herrania", "Glossostemon", "Guazuma") # TO DO: Add any missing genera, if any
 families = c("Byttnerioideae", "Sterculiaceae")
 topics = c("morphology", "evolution", "ecology", "phylogenetics") # TO DO: Add any relevant topics
 to_add = c(genera, families, topics)
-gs_selected_terms = c(gs_selected_terms, to_add)
+final_terms = c(gs_selected_terms, to_add)
 cat("\nFinal list of terms: \n")
-print(gs_selected_terms)
+print(final_terms)
+
+# Save results to text file 
+final_terms_fname = "final_search_terms.txt"
+write.table(final_terms, file = final_terms_fname, row.names = FALSE, 
+            col.names = FALSE, sep = "\n")
+cat("Identified search terms saved to: ", final_terms_fname)
 ```
 
 # Manual grouping into clusters - for more rigorous search we will need a combination of OR and AND operators
 ```{r}
-topics = c(topics, gs_selected_terms[c(1:7)]) # TO DO: Make sure the indices for all returned topics are shown here
+topics = c(topics, final_terms[c(1:7)]) # TO DO: Make sure the indices for all returned topics are shown here
 taxa = c(families, genera)
 
 # Check that all terms were grouped
-all.equal(length(gs_selected_terms), sum(length(taxa), length(topics)))
+all.equal(length(final_terms), sum(length(taxa), length(topics)))
 
 # Make an ordered list by family, genus, and topic
-gs_grouped_selected_terms <- list(
+final_grouped_terms <- list(
 taxa = taxa,
 topics = topics
 )
@@ -311,7 +323,7 @@ topics = topics
 ```{r}
 # Write the search
 search_string = litsearchr::write_search(
-gs_grouped_selected_terms,
+final_grouped_terms,
 languages = "English",
 exactphrase = TRUE,
 stemming = FALSE,
@@ -319,6 +331,76 @@ closure = "left",
 writesearch = FALSE
 )
 
+# Print the generated search string
 cat("\nSearch string: \n")
 print(search_string)
+# Remove all characters from search string except letters, numbers, space, and parantheses
+search_string = gsub("[^A-Za-z0-9 ()]", "", search_string)
+cat("\nSearch string with special characters removed: \n")
+print(search_string)
+
+# Save search string to text file
+search_string_fname = "search_string.txt"
+write.table(search_string, file = search_string_fname, row.names = FALSE, 
+            col.names = FALSE, sep = "\n")
+cat("Identified search terms saved to: ", search_string_fname)
+```
+
+# Actual Search: Scrape Google Scholar using terms defined above
+```{r, cache = TRUE}
+# Define useragent
+useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+
+# Scrape pages 1:25 and save results as a tsv file (gs_df_final.tsv)
+gs_df_final = scrape_gs(term = search_string, pages = 1:25, crawl_delay = 1.2, useragent) # scrape first 25 pages (250 published works)
+write.table(gs_df_final, file='gs_df_final.tsv', quote=TRUE, sep='\t', row.names = FALSE)
+```
+
+# Analyze search result patterns
+Analyze search result patterns here and keep the resulting figures for your literature review paper. Then read through the articles and manually apply filter criteria yourself before writing the literature review.
+```{r, cache = TRUE}
+# Read in search results
+gs_df_f = read.table("gs_df_final.tsv", sep='\t', header = TRUE)
+
+# Display results as a scrollable table using Kable
+cat("\Search results: \n")
+kbl(gs_df_f, table.attr = "style = \"color: black;\"") %>%
+  kable_styling("striped", full_width = F) %>%
+  scroll_box(width = "100%")
+
+# Remove duplicates
+gs_df = gs_df_f %>% distinct(title, .keep_all = TRUE)
+cat("\nRows in original df: ", nrow(gs_df_f))
+cat("\nRows in df with duplicates removed: ", nrow(gs_df))
+
+# Combine key term results
+gs_df_terms = litsearchr::extract_terms(text = gs_df[,"abstract"],
+                                        method = "fakerake", 
+                                        min_freq = 3, 
+                                        min_n = 2,
+                                        stopwords = 
+                                        stopwords::data_stopwords_stopwordsiso$en
+                                      )
+cat("First pass: Automatically extracted terms: \n")
+print(gs_df_terms)
+
+# Remove duplicates
+gs_df_terms_unq = unique(gs_df_terms)
+cat("\nTerms in original list: ", length(gs_df_terms))
+cat("\nTerms in list with duplicates removed: ", length(gs_df_terms_unq))
+
+# Use the title and abstract of each article
+gs_docs = paste(gs_df[, "title"], gs_df[, "abstract"]) 
+gs_dfm = litsearchr::create_dfm(elements = gs_docs, 
+                                features = gs_df_terms_unq
+                                ) # document-feature matrix
+gs_coocnet = litsearchr::create_network(gs_dfm, min_studies = 3)
+ggraph(gs_coocnet, layout = "stress") +
+coord_fixed() +
+expand_limits(x = c(-3, 3)) +
+geom_edge_link(aes(alpha = weight)) +
+geom_node_point(shape = "circle filled", fill = "white") +
+geom_node_text(aes(label = name), hjust = "outward", check_overlap = TRUE) +
+guides(edge_alpha = "none") +
+theme_void()
 ```
