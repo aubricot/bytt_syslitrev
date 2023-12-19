@@ -1,7 +1,7 @@
 ---
 title: "Systematic Literature Review using litsearchr"
-author: "K Wolcott"
-date: "16 Nov 2023"
+author: "J Cary"
+date: "19 Dec 2023"
 output: rmarkdown::github_document
 always_allow_html: TRUE
 ---
@@ -185,7 +185,7 @@ write.table(gs_df, file='gs_df1.tsv', quote=TRUE, sep='\t', row.names = FALSE)
 # Create Co-Occurrence Network
 ```{r}
 # Read in search results
-gs_df1 = read.table("gs_df1.tsv", sep='\t', header = TRUE)
+gs_df1 = read.table("gs_df1.tsv", sep='\t', header = TRUE, fill = TRUE)
 
 # Display results as a scrollable table using Kable
 cat("Search results: \n")
@@ -287,11 +287,11 @@ cat("Identified search terms saved to: ", gs_terms_fname)
 # TO DO
 ```{r}
 # Manually remove all unwanted substrings 
-to_remove = c("subfamilia byttnerioideae", "study aimed", "abroma augusta", "family sterculiaceae", "waltheria indica", "waltheria douradinha", "theobroma cacao") # TO DO: Modify this list based on terms displayed above that you do not want to search using
+to_remove = c("abroma agusta", "byttneria pilosa", "family sterculiaceae", "conservation status", "family sterculiaceae", "gross morphology", "heracleum lasiopetalum", "paper reports", "theobroma cacao", "sympatric species", "tetrataenium lasiopetalum", "theobroma cacao", "waltheria indica", "waltheria species", "waltheria viscosissima") # TO DO: Modify this list based on terms displayed above that you do not want to search using
 gs_selected_terms = gs_selected_terms[!gs_selected_terms %in% to_remove] 
 genera = c("Hermannieae", "Lasiopetaleae", "Bytttnerieae", "Theobromeae", "Waltheria", "Hermannia", "Melochia", "Hannafordia", "Maxwellia", "Lasiopetalum", "Thomasia", "Guichenotia", "Commersonia",  "Rulingia", "Keraudrenia", "Seringia", "Abroma", "Byttneria", "Ayenia", "Rayleya", "Kleinhovia",  "Leptonychia", "Scaphopetalum", "Theobroma", "Herrania", "Glossostemon", "Guazuma") # TO DO: Add any missing genera, if any
 families = c("Byttnerioideae", "Sterculiaceae")
-topics = c("morphology", "evolution", "ecology", "phylogenetics") # TO DO: Add any relevant topics
+topics = c("morphology", "evolution", "ecology", "phylogenetics", "pollen morphology", "floral morphology", "floral development", "floral characteristics", "pollen", "phylogeny", "medicinal plants", "chemical investigation") # TO DO: Add any relevant topics
 to_add = c(genera, families, topics)
 final_terms = c(gs_selected_terms, to_add)
 cat("\nFinal list of terms: \n")
