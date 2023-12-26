@@ -1,0 +1,1 @@
+"intext:((Sterculiaceae OR Bytttnerieae OR Hermannia OR Maxwellia OR Guichenotia OR Keraudrenia OR Byttneria OR Kleinhovia OR Theobroma OR Guazuma) AND (evolution OR pollen morphology OR floral characteristics OR medicinal plants))"
