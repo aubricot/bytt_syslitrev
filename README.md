@@ -13,7 +13,7 @@ Use [sys_lit_rev.Rmd](https://github.com/aubricot/bytt_syslitrev/blob/main/sys_l
 
 First, you will use some manually selected keywords for preliminary searches. Then, keywords will be automatically extracted from the abstracts found during the preliminary passes. Finally, carry out a systematic literature search using the complete list of keywords and analyze patterns in found articles.
 
-:point_right: :hibiscus: To see a rendered version (in progress) of the current R Markdown file with outputs, [click here](https://github.com/aubricot/bytt_syslitrev/blob/main/sys_lit_rev.md).
+:point_right: :hibiscus: To see a rendered version (in progress) of the current R Markdown file with outputs on RPubs, [click here](http://rpubs.com/aubricot/byt_syslitrev).
 
 ## References 
 <ins>Botanical Literature</ins>
