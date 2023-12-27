@@ -371,8 +371,8 @@ for (i in 1:3){
 ```
 
 # Actual Search: Scrape Google Scholar using terms defined above in three passes
-```{r, cache = TRUE}
-# TO DO: Run this in three parts (over 3 days) by commenting/uncommenting out lines for gs_df_final1-3 and write.table(gs_df_final1-3.tsv)
+```{r}
+# TO DO: Run this in three parts (over 3 days) by changing search_num for search phrases 1-3
 
 # Define useragent
 useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
@@ -381,14 +381,18 @@ useragent = httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb
 search_num = "1" # TO DO: Change this value from 1-3 each time you run this block
 cat("Performing Search ", search_num)
 
-# Auto-fill other search parameters
-## Do the search (Scrape pages 1:25 (250 papers))
+# Auto-fill search parameters using search_num
 gs_df_fx = paste("gs_df_final", search_num, sep = "")
 cat("\nAssigning results to variable: ", gs_df_fx)
 search_str = paste("search_string", search_num, sep = "")
-assign(gs_df_fx, scrape_gs(term = search_str, pages = 1:25, crawl_delay = 
+search_str_fname = paste(search_str, ".txt", sep = "")
+assign(search_str, read.table(file = search_str_fname, sep = "\n"))
+
+# Do the search (Scrape pages 1:25 (250 papers))
+assign(gs_df_fx, scrape_gs(term = get(search_str), pages = 1:25, crawl_delay = 
                              1.2, useragent))
-## Export the results to tsv file (gs_df_final1-3.tsv)
+
+# Export the results to tsv file (gs_df_final1-3.tsv)
 gs_df_fname = paste("gs_df_final", search_num, ".tsv", sep = "")
 cat("\nSaving results for search to: ", gs_df_fname)
 write.table(get(gs_df_fx), file = gs_df_fname, quote = TRUE, sep = '\t',
@@ -397,17 +401,17 @@ write.table(get(gs_df_fx), file = gs_df_fname, quote = TRUE, sep = '\t',
 
 # Analyze search result patterns
 Analyze search result patterns here and keep the resulting figures for your literature review paper. Then read through the articles and manually apply filter criteria yourself before writing the literature review.
-```{r cache=FALSE}
+```{r}
 # Read in search results
 gs_df_f1 = read.table("gs_df_final1.tsv", sep='\t', header = TRUE)
 gs_df_f2 = read.table("gs_df_final2.tsv", sep='\t', header = TRUE)
 gs_df_f3 = read.table("gs_df_final3.tsv", sep='\t', header = TRUE)
 
 # Concatenate results into one dataframe
-rgs_df_f = rbind(gs_df_f1, gs_df_f2, gs_df_f3)
+gs_df_f = rbind(gs_df_f1, gs_df_f2, gs_df_f3)
 
 # Display results as a scrollable table using Kable
-cat("\Search results: \n")
+cat("\nSearch results: \n")
 kbl(gs_df_f, table.attr = "style = \"color: black;\"") %>%
   kable_styling("striped", full_width = F) %>%
   scroll_box(width = "100%")
@@ -440,11 +444,11 @@ gs_dfm = litsearchr::create_dfm(elements = gs_docs,
 # Create a co-occurence network for all terms found in 3+ articles
 gs_coocnet = litsearchr::create_network(gs_dfm, min_studies = 3)
 ggraph(gs_coocnet, layout = "stress") +
-coord_fixed() +
-expand_limits(x = c(-3, 3)) +
-geom_edge_link(aes(alpha = weight)) +
-geom_node_point(shape = "circle filled", fill = "white") +
-geom_node_text(aes(label = name), hjust = "outward", check_overlap = TRUE) +
-guides(edge_alpha = "none") +
-theme_void()
+  coord_fixed() +
+  expand_limits(x = c(-3, 3)) +
+  geom_edge_link(aes(alpha = weight)) +
+  geom_node_point(shape = "circle filled", fill = "white") +
+  geom_node_text(aes(label = name), hjust = "outward", check_overlap = TRUE) +
+  guides(edge_alpha = "none") +
+  theme_void()
 ```
